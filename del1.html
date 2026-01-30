@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The  Bar List</title>
+    <style>
+        :root { --gold: #c5a059; --dark: #0f0f0f; --card: #1a1a1a; --text: #e0e0e0; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--dark); color: var(--text); margin: 0; padding: 10px; }
+        .container { display: grid; grid-template-columns: 1fr 480px; gap: 20px; max-width: 1600px; margin: auto; }
+        
+        .header-controls { position: sticky; top: 0; z-index: 100; background: var(--dark); padding: 10px 0; }
+        #menuSearch { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid var(--gold); background: #222; color: white; font-size: 1.1em; outline: none; box-sizing: border-box; }
+
+        .menu-section { background: var(--card); padding: 20px; border-radius: 12px; }
+        h1 { color: var(--gold); text-align: center; letter-spacing: 2px; margin: 0 0 10px 0; }
+        h3 { color: var(--gold); border-left: 4px solid var(--gold); padding: 8px 12px; margin-top: 25px; text-transform: uppercase; background: rgba(197, 160, 89, 0.1); font-size: 0.9em; }
+
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #2a2a2a; }
+        .item-row:hover { background: #222; }
+        
+        .controls-group { display: flex; align-items: center; gap: 15px; }
+        select { background: #333; color: white; border: 1px solid #555; padding: 8px; border-radius: 4px; min-width: 100px; cursor: pointer; }
+        
+        .qty-box { display: flex; align-items: center; gap: 10px; background: #000; padding: 4px 8px; border-radius: 6px; border: 1px solid #444; }
+        .q-btn { background: var(--gold); border: none; width: 30px; height: 30px; border-radius: 4px; font-weight: bold; cursor: pointer; color: black; font-size: 1.2em; display: flex; align-items: center; justify-content: center; }
+        .q-val { min-width: 20px; text-align: center; font-weight: bold; color: white; }
+
+        .bill-section { background: white; color: #1a1a1a; padding: 20px; border-radius: 12px; height: fit-content; position: sticky; top: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .table-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; font-weight: bold; box-sizing: border-box; font-size: 1.1em; text-align: center; }
+        
+        .bill-table { width: 100%; border-collapse: collapse; }
+        .bill-table th { text-align: left; border-bottom: 2px solid #333; padding: 8px 0; font-size: 0.8em; }
+        .bill-table td { padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.95em; }
+
+        .totals { margin-top: 15px; border-top: 2px solid #333; padding-top: 10px; }
+        .total-line { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .grand-total { font-weight: bold; font-size: 1.5em; color: #b12704; border-top: 1px double #333; padding-top: 10px; }
+        
+        .action-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .print-btn { flex: 2; padding: 15px; background: #1a1a1a; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .reset-btn { flex: 1; padding: 15px; background: #f4f4f4; color: #333; border: 1px solid #ccc; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        @media (max-width: 1100px) { .container { grid-template-columns: 1fr; } .bill-section { position: static; } }
+        @media print { .menu-section, .header-controls, .q-btn, .reset-btn { display: none !important; } .container { display: block; } .bill-section { box-shadow: none; width: 100%; padding: 0; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="menu-section">
+        <h1>THE BAR MENU</h1>
+        <div class="header-controls">
+            <input type="text" id="menuSearch" placeholder="🔍 Search Cocktails, Shots, Wine, Brandy..." onkeyup="filterMenu()">
+        </div>
+        <div id="menu-content"></div>
+    </div>
+
+    <div class="bill-section">
+        <input type="text" id="tableNo" class="table-input" placeholder="Table Number">
+        <h2 style="text-align:center; border-bottom: 2px solid #1a1a1a; padding-bottom:5px; margin:0;">ORDER SUMMARY</h2>
+        
+        <table class="bill-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th style="text-align:center">Qty</th>
+                    <th style="text-align:right">Total</th>
+                </tr>
+            </thead>
+            <tbody id="cart-items"></tbody>
+        </table>
+
+        <div class="totals">
+            <div class="total-line"><span>Subtotal:</span><span id="sub-val">₹0</span></div>
+            <div class="total-line"><span>SC (7.5%):</span><span id="tax-val">₹0</span></div>
+            <div class="total-line grand-total"><span>Total:</span><span id="grand-val">₹0</span></div>
+        </div>
+        
+        <div class="action-btns">
+            <button class="reset-btn" onclick="resetBill()">RESET</button>
+            <button class="print-btn" onclick="window.print()">PRINT BILL</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const menuData = {
+    "🍸 COCKTAILS": [
+        ["Darjeeling Line", 495], ["Market Telegram", 395], ["Second Sun", 375], ["Rose Club No.6", 595], ["Marble Permit", 595], ["Pipe & Ledger", 495], ["Green Telegraph", 395], ["Sonic East", 395], ["Evening Standard", 495], ["Eden Letter", 495], ["Field Order", 595], ["Match Box Memo", 495], ["Writer’s Fix", 495], ["Chowringhee No.1", 395], ["Cosmopolitan", 495], ["Daiquiri", 375], ["Gin Basil Smash", 495], ["Paloma", 495], ["Whisky Sour", 495]
+    ],
+    "🥃 SHOTS": [
+        ["Brine & Shine", 275], ["Bubble Trouble", 225], ["Fizzy Feriwaala", 225], ["Jolly Bloom", 245], ["Midnight Southie", 195], ["Angrezi", 150], ["Cinder Bloom", 150], ["Red Tram 75", 130], ["Elgin Charge", 130], ["Grand Trank Drop", 130], ["Moon Sour", 130], ["Battery Mint", 130], ["Regal Dust", 130], ["Portside Heat", 130], ["Studio Cut", 130]
+    ],
+    "🥃 BRANDY / COGNAC": [
+        ["Mansion House", 180, 330, 3950], ["Good Man", 190, 360, 4290], ["Morpheus", 210, 380, 4550], ["Morpheus Blue", 210, 420, 5050], ["Le Grand Dauphin", 320, 640, 7690], ["St Remy V.S.O.P", 410, 750, 8990], ["Godet V.S.O.P", 595, 1070, 12305], ["Hennessy Very Special", 500, 890, 10690], ["Hennessy V.S.O.P", 540, 950, 11390], ["Hennessy X.O", 1350, 2540, 30490]
+    ],
+    "🍷 RED WINE": [
+        ["Fratelli Classic Merlot", 230, 1125], ["Fratelli Cab Sauvignon", 250, 1225], ["Vina Temprana Old Vines", 1725], ["Bush Ballad", 1800], ["Frontera Shiraz", 1900], ["Golden Sparrow Sangiovese", 1900], ["Two Oceans Pinotage", 420, 2050], ["Bodega Norton Merlot", 2050], ["Baron Philippe Cabernet", 2100], ["Baron Philippe Pinot Noir", 2100], ["Vina Tarapaca Cabernet", 2250], ["Nederburg Pinotage", 2450], ["Fratelli Pinot Noir", 325, 1465]
+    ],
+    "ROSÉ": [
+    ["Fratelli Shiraz Rose", 240, 1150],
+    ["Vina Temprana Garnacha Rosado", 1550],
+    ["Mateus Rose", 2400],
+    ["Lillet Rose", 2400]
+],
+"SPARKLING WINE": [
+    ["Noi Sparkling", 1350],
+    ["Fratelli Gran Cuve Brut", 1550],
+    ["Laurent Perrier", 9790],
+    ["Moet Chandon", 8490],
+    ["Dom Perignon", 27490],
+    ["Chandan Brut", 3100],
+    ["Bellini Canella", 2860]
+],
+"WHITE WINE": [
+    ["Fratelli Sangiovese Bianco", 250, 1200],
+    ["Fratelli Chardonnay", 250, 1200],
+    ["Vina Temprana Macabeo", 1700],
+    ["Bush Ballad Sauvignon Blanc", 1800],
+    ["Frontera Chardonnay", 1850],
+    ["Vina Tarapaca Chardonnay", 1900],
+    ["Two Oceans Sauvignon Blanc", 410, 1990],
+    ["Bodega Norton Sauvignon Blanc", 2100],
+    ["Zonin Pinot Grigio", 2290],
+    ["Nederburg Sauvignon Blanc", 2350]
+],
+
+    "🍹 LIQUEUR": [
+        ["Ottos", 160, 320, 4270], ["Cabo Coconut", 240, 430, 5150], ["Luxardo Bitter Bianco", 255, 510, 6120], ["Luxardo Hazelnut", 255, 510, 6120], ["Dolin Vermouth (Dry/Rouge)", 255, 450, 5400], ["Kahlua", 275, 495, 5950], ["Molinari Sambuca", 300, 540, 6490], ["Campari", 300, 540, 6490], ["Jack Daniels Apple", 310, 575, 6890], ["Jagermeister", 320, 590, 7090], ["Aperol", 325, 650, 7475], ["Skinos Masticha", 340, 650, 7790], ["Ouzo Of Plomari", 410, 800, 9590], ["Baileys", 415, 745, 8570], ["Cointreau", 500, 950, 10925]
+    ],
+    "TEQUILA / AGAVE": [
+    ["Desmondji", 230, 425, 5090],
+    ["Maya Pistola Joven", 260, 490, 5890],
+    ["Jose Cuervo Reposado", 290, 540, 6490],
+    ["Jose Cuervo Silver", 290, 540, 6490],
+    ["Tequila Camino Gold", 290, 550, 6590],
+    ["Tequila Camino Real Blanco", 290, 550, 6590],
+    ["Tequila Don Angel", 310, 560, 6690],
+    ["Maya Pistola Reposado", 320, 575, 6890],
+    ["Maya Pistola Rosa", 320, 600, 7190],
+    ["Dos Flamos Blanco", 340, 660, 7890],
+    ["Reserva 1800 Blanco", 370, 660, 7890],
+    ["Don Julio Blanco", 380, 725, 8690],
+    ["Creyente Mezcal", 380, 725, 8690],
+    ["Tequila Patron Silver", 415, 780, 9350],
+    ["Reserva 1800 Anejo", 415, 760, 9090],
+    ["Tequila Patron Reposado", 520, 975, 11690],
+    ["Jose Cuervo Trad Reposado", 290, 535, 6260],
+    ["Don Julio Reposado", 460, 790, 9800],
+    ["Reserva 1800 Reposado", 460, 790, 9800]
+],
+"VODKA": [
+    ["Smirnoff Zesty Lime", 135, 255, 3050],
+    ["Smirnoff Minty Jamun", 135, 255, 3050],
+    ["Smirnoff Mirch Mango", 135, 255, 3050],
+    ["Smirnoff Regular Vodka", 165, 325, 4025],
+    ["Magic Moments Verve", 195, 375, 4490],
+    ["Skyy Blue Vodka", 230, 420, 5050],
+    ["Ketel One Vodka", 250, 450, 5390],
+    ["Absolute", 225, 420, 5050],
+    ["Grey Goose Vodka", 295, 575, 6890],
+    ["D'yavol Single Estate", 295, 575, 6890],
+    ["Haku Vodka", 340, 650, 7790],
+    ["U'luvka Vodka", 340, 690, 8290],
+    ["Belvedere Vodka", 390, 730, 8750],
+    ["Beluga", 390, 730, 8750],
+    ["Roberto Cavalli Vodka", 400, 750, 8990],
+    ["Crystal Head", 450, 850, 10190],
+    ["Ciroc Snap Frost Vodka", 290, 520, 5980],
+    ["Belenkaya Gold", 195, 345, 4250]
+],
+
+    "GIN": [
+    ["Greater Than London Dry", 210, 380, 4550],
+    ["Samsara Gin", 220, 380, 4550],
+    ["Malhar Citrus Craft", 230, 425, 5090],
+    ["Malhar Classic Dry", 230, 425, 5090],
+    ["Hoegaarden Belgian Original", 240, 425, 5090],
+    ["Samsara City Of Pink", 230, 425, 5090],
+    ["Gordons London Dry", 250, 465, 5590],
+    ["Samsara Coffee & Hazelnut", 240, 460, 5490],
+    ["Beefeater", 225, 425, 5090],
+    ["Jaisalmer Craft Indian Gin", 250, 470, 5650],
+    ["Tanqueray London Dry", 260, 510, 6090],
+    ["Hoegaarden Mediterranean", 250, 470, 5650],
+    ["Hoegaarden Parisian Romance", 250, 470, 5650],
+    ["Hapusan Himalayan Dry", 280, 490, 5890],
+    ["Samsara Grapefruit & Rose", 260, 490, 5890],
+    ["Samsara Lemon & Elderflower", 260, 490, 5890],
+    ["Samsara Vale Of Paradise", 260, 490, 5890],
+    ["Bombay Sapphire", 260, 490, 5890],
+    ["Bombay Sapphire Sunset", 260, 490, 5890],
+    ["Tanqueray No Ten", 300, 575, 6890],
+    ["Roku Gin", 340, 590, 7090],
+    ["Sipsmith Gold", 355, 640, 7360],
+    ["Hendricks Gin", 370, 675, 8090],
+    ["Monkey 47 Gin", 475, 875, 10490],
+    ["Blue Riband Gin", 130, 270, 3250]
+],
+"RUM": [
+    ["Old Monk", 160, 295, 3550],
+    ["Camikara Agricole 3yrs", 195, 350, 4190],
+    ["Bacardi Carta Blanca", 195, 350, 4190],
+    ["Amrut Two Indies Rum", 190, 340, 4090],
+    ["Amrut Two Indies White", 190, 340, 4090],
+    ["Captain Morgan Original", 200, 340, 4090],
+    ["Bacardi Carta Oro Gold", 200, 360, 4290],
+    ["Bacardi Black Deluxe", 190, 350, 4190],
+    ["Sitara Botanical Spiced", 190, 350, 4190],
+    ["Seven Rivers Spiced", 210, 380, 4550],
+    ["Bacardi Reserva Ocho", 310, 575, 6890],
+    ["Bacardi Gran Diez 10yrs", 380, 710, 8490],
+    ["Diplomatico Planas White", 360, 680, 8150],
+    ["Flor De Cana Gran Reserva", 360, 680, 8150],
+    ["Diplomatico Reserve Exclusiva", 400, 725, 8690],
+    ["Bush Rum Passionfruit", 345, 670, 7970],
+    ["Kraken Spiced Rum", 345, 650, 7715],
+    ["Appleton Estate 12yo", 350, 650, 7790]
+],
+"SINGLE MALT WHISKEY": [
+    ["Paul John Nirvana", 230, 395, 4750],
+    ["Amrut Amalgam Malt", 260, 475, 5690],
+    ["Amrut Amalgam Peated", 260, 475, 5690],
+    ["Sangam World Malt", 275, 495, 5950],
+    ["Paul John Brilliance", 275, 495, 5950],
+    ["Amrut Fusian", 295, 550, 6590],
+    ["Copper Dog", 295, 575, 6890],
+    ["Godawan Fruit & Spice", 295, 550, 6590],
+    ["Godawan Rich & Rounded", 295, 550, 6590],
+    ["Ballantines 7yo American", 275, 510, 6325],
+    ["Glenlivet Caribbean", 275, 525, 6290],
+    ["Longitude 77 Luxury", 305, 570, 7015],
+    ["Glenlivet 12yo", 325, 595, 7150],
+    ["Glenkinchie 12yo", 350, 625, 7490],
+    ["Aberfeldy Highland 12yo", 350, 650, 7790],
+    ["Cragganmore", 350, 625, 7490],
+    ["Caol Ila Aged 12yo", 350, 645, 7750],
+    ["The Singleton Nectar 12yo", 350, 645, 7750],
+    ["Talisker Single Malt 10yo", 350, 645, 7750],
+    ["Laphroaig Islay Select", 345, 595, 7150],
+    ["Laphroaig Single Malt 10yo", 345, 625, 7490],
+    ["Jura Bourbon Cask", 370, 685, 8190],
+    ["Bowmore Islay Single Malt", 370, 695, 8350],
+    ["Rampur Indian Single Malt", 370, 695, 8350],
+    ["The Ardmore Highland", 345, 645, 7750],
+    ["Dalwhinnie Highland", 375, 695, 8350],
+    ["Glenfiddich 12", 425, 795, 9550],
+    ["Aultmore Aged 12yo", 450, 845, 10150],
+    ["Lagavulin Islay 16yo", 450, 845, 10150],
+    ["The Macallan 12yo", 475, 895, 10750],
+    ["Royal Brackla Highland 12yo", 525, 975, 11700],
+    ["The Dalmore 12yo", 540, 995, 11950],
+    ["Royal Salute 21yo", 595, 1190, 14280],
+    ["The Yamazaki 12yo", 875, 1650, 19790]
+],
+
+
+
+  
+    "PREMIUM BLENDED SCOTCH": [
+        ["JW Blonde", 225, 395, 4750],
+        ["JW Black Label", 325, 595, 7150],
+        ["JW Double Black", 325, 595, 7150],
+        ["Dewars 12yo", 325, 595, 7150],
+        ["Chivas Regal 12yo", 295, 525, 6290],
+        ["Dewars 15yo", 350, 625, 7490],
+        ["Bushmills Irish 12yrs", 355, 670, 8165],
+        ["Monkey Shoulder", 375, 695, 8350],
+        ["Dewars 18yo", 450, 795, 9550],
+        ["JW Blue Label", 595, 1100, 13190],
+        ["JW Gold Label", 345, 650, 7790],
+        ["Chivas Regal 15yo", 345, 650, 7790]
+    ],
+    "IMFL / INDIAN BLENDED SCOTCH": [
+        ["Blenders Pride", 175, 310, 4025],
+        ["Ballantines", 225, 425, 5090],
+        ["Teachers Highland Cream", 195, 350, 4190],
+        ["Teachers Highland Reserve", 210, 375, 4490],
+        ["Black & White", 225, 410, 4910],
+        ["100 Pipers", 195, 350, 4190],
+        ["Dewars White Label", 225, 400, 4790],
+        ["Scottish Leader", 210, 400, 4790],
+        ["Black Dog Century Reserve", 225, 400, 4790],
+        ["J & B Rare", 240, 450, 5390],
+        ["JW Red Label", 270, 495, 5930],
+        ["Black Dog Triple Gold", 250, 475, 5690],
+        ["Oaksmith Gold", 170, 320, 3850],
+        ["Ranthambore Heritage", 195, 365, 4390],
+        ["Teachers 50", 225, 400, 4790],
+        ["Teachers Golden Thistle", 240, 450, 5390]
+    ],
+    "AMERICAN, IRISH & CANADIAN WHISKEY": [
+    ["Fireball Cinnamon", 170, 300, 3590],
+    ["Black Velvet Canadian", 230, 425, 5090],
+    ["Jim Beam Honey", 230, 425, 5090],
+    ["Jim Beam Orange", 230, 425, 5090],
+    ["Budweiser Magnum Dbl Barrel", 230, 425, 5090],
+    ["Jim Beam", 230, 425, 5090],
+    ["Jameson Irish Whisky", 250, 450, 5390],
+    ["Varchas Detroit Reserve", 250, 450, 5390],
+    ["Jim Beam Black", 265, 495, 5950],
+    ["Makers Mark", 300, 550, 6590],
+    ["Jack Daniels", 300, 550, 6590],
+    ["Jack Daniels Fire", 300, 550, 6590],
+    ["Jack Daniels Honey", 300, 550, 6590],
+    ["Varchas Straight Rye", 340, 625, 7490],
+    ["Varchas Straight Bourbon", 340, 625, 7490],
+    ["Jd Gentleman Jack", 325, 600, 7190],
+    ["Woodford Reserve", 375, 700, 8390],
+    ["Jack Daniels Single Barrel", 395, 750, 8990],
+    ["Bushmills Original Irish", 270, 485, 5580]
+    ],
+    "JAPANESE / EXCLUSIVE WHISKEY": [
+        ["The Yamazaki 12yo", 875, 1650, 19790],
+        ["Suntory Toki", 350, 600, 7190],
+        ["Hibiki Japanese Harmony", 595, 1080, 12950],
+        ["The Yamazaki", 690, 1290, 15490]
+    ],
+"🚬 CIGARETTES": [
+        ["Classic Connect 20s", 461],
+        ["Classic Ice Burst 10s", 256],
+        ["Classic Mild 10s", 256],
+        ["Gold Flake Kings 10s", 256],
+        ["Gold Flake King Lights 10s", 256],
+        ["Gold Flake King Mixpod 10s", 256],
+        ["Gold Flake Social 20s", 512]
+    ],
+"🍹 MOCKTAILS": [
+    ["Kokum Kick", 150],
+    ["Voltage Drop", 150],
+    ["Party Starter", 150]
+    
+],
+"🥤 SOFT DRINKS & MIXERS": [
+    ["Coke / Sprite / Thums Up (Can)", 95],
+    ["Diet Coke (Can)", 110],
+    ["Schweppes Ginger Ale", 120],
+    ["Schweppes Tonic Water", 120],
+    ["Red Bull Energy Drink", 225],
+    ["Bottled Water (Premium)", 80],
+    ["Aerated Water (Soda)", 60]
+],
+"🧃 REAL JUICES (CAN/TETRA)": [
+    ["Real Orange Juice", 70],
+    ["Real Cranberry Juice", 70],
+    ["Real Pineapple Juice", 70],
+    ["Real Guava Juice", 75],
+    ["Real Apple Juice", 70],
+    ["Real Litchi Juice", 70]
+]
+
+
+};
+
+let cart = [];
+
+function renderMenu() {
+    const container = document.getElementById('menu-content');
+    container.innerHTML = '';
+    for (const [cat, items] of Object.entries(menuData)) {
+        let catHtml = `<div><h3>${cat}</h3>`;
+        items.forEach((item) => {
+            const name = item[0];
+            const safeId = name.replace(/[^a-zA-Z0-9]/g, '');
+            catHtml += `
+                <div class="item-row" data-name="${name.toLowerCase()}" data-category="${cat}">
+                    <div style="flex:1"><strong>${name}</strong></div>
+                    <div class="controls-group">
+                        <select id="sel-${safeId}" onchange="syncUI()">
+                            ${getOptions(item)}
+                        </select>
+                        <div class="qty-box">
+                            <button class="q-btn" onclick="updateQty('${name}', '${safeId}', -1, '${cat}')">-</button>
+                            <span class="q-val" id="qval-${safeId}">0</span>
+                            <button class="q-btn" onclick="updateQty('${name}', '${safeId}', 1, '${cat}')">+</button>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        catHtml += `</div>`;
+        container.innerHTML += catHtml;
+    }
+}
+
+function getOptions(item) {
+    if (item.length === 4) return `<option value="${item[1]}">Single</option><option value="${item[2]}">Double</option><option value="${item[3]}">Bottle</option>`;
+    if (item.length === 3) return `<option value="${item[1]}">Glass</option><option value="${item[2]}">Bottle</option>`;
+    if (item.length === 2 && item[1] > 1000) return `<option value="${item[1]}">Bottle</option>`;
+    return `<option value="${item[1]}">Standard</option>`;
+}
+
+function updateQty(name, safeId, delta, category) {
+    const sel = document.getElementById('sel-' + safeId);
+    const size = sel.options[sel.selectedIndex].text;
+    const price = parseInt(sel.value);
+    const cartId = name + size;
+
+    let existing = cart.find(i => i.cartId === cartId);
+    if (existing) {
+        existing.qty += delta;
+        if (existing.qty <= 0) cart = cart.filter(i => i.cartId !== cartId);
+    } else if (delta > 0) {
+        cart.push({ cartId, name, safeId, size, price, qty: 1, category: category });
+    }
+    syncUI();
+}
+
+// THIS IS THE NEW FIX: Separates taxable and non-taxable
+function syncUI() {
+    document.querySelectorAll('.q-val').forEach(v => v.innerText = '0');
+    
+    const list = document.getElementById('cart-items');
+    list.innerHTML = '';
+    
+    let taxableAmount = 0;    
+    let nonTaxableAmount = 0; 
+
+    cart.forEach((item) => {
+        const total = item.price * item.qty;
+        
+        // Update the quantity display in the menu
+        const selInMenu = document.getElementById('sel-' + item.safeId);
+        if (selInMenu && selInMenu.options[selInMenu.selectedIndex].text === item.size) {
+            document.getElementById('qval-' + item.safeId).innerText = item.qty;
+        }
+
+        // Logic: Exclude Cigarettes from Service Charge
+        if (item.category === "🚬 CIGARETTES" || item.name.toLowerCase().includes("pack")) {
+            nonTaxableAmount += total;
+        } else {
+            taxableAmount += total;
+        }
+
+        list.innerHTML += `
+            <tr>
+                <td><strong>${item.name}</strong><br><small>${item.size}</small></td>
+                <td style="text-align:center">
+                    <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <button class="q-btn" style="width:24px; height:24px; font-size:1em;" onclick="updateQty('${item.name}', '${item.safeId}', -1, '${item.category}')">-</button>
+                        <span>${item.qty}</span>
+                        <button class="q-btn" style="width:24px; height:24px; font-size:1em;" onclick="updateQty('${item.name}', '${item.safeId}', 1, '${item.category}')">+</button>
+                    </div>
+                </td>
+                <td style="text-align:right; font-weight:bold;">₹${total}</td>
+            </tr>`;
+    });
+
+    // Final math
+    const serviceCharge = Math.round(taxableAmount * 0.075);
+    const subtotal = taxableAmount + nonTaxableAmount;
+    const finalTotal = subtotal + serviceCharge;
+
+    document.getElementById('sub-val').innerText = '₹' + subtotal;
+    document.getElementById('tax-val').innerText = '₹' + serviceCharge;
+    document.getElementById('grand-val').innerText = '₹' + finalTotal;
+}
+
+function filterMenu() {
+    const q = document.getElementById('menuSearch').value.toLowerCase();
+    document.querySelectorAll('.item-row').forEach(row => {
+        row.style.display = row.getAttribute('data-name').includes(q) ? 'flex' : 'none';
+    });
+}
+
+function resetBill() {
+    if(confirm("Clear current order?")) { 
+        cart = []; 
+        document.getElementById('tableNo').value = ''; 
+        syncUI(); 
+    }
+}
+
+renderMenu();
+</script>
+</body>
+</html>
