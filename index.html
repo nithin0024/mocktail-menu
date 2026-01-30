@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campus Chill - Order System</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f7ff;
+    padding:15px;
+}
+
+h1{
+    text-align:center;
+    color:#0033cc;
+}
+
+.box{
+    background:#fff;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:15px;
+    box-shadow:0 0 5px rgba(0,0,0,0.1);
+}
+
+.item{
+    display:flex;
+    justify-content:space-between;
+    margin:8px 0;
+}
+
+input{
+    width:55px;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    background:#0033cc;
+    color:white;
+    border:none;
+    border-radius:8px;
+    font-size:16px;
+    margin-top:10px;
+}
+
+.bill{
+    display:none;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🍹 Campus Chill</h1>
+
+<div class="box">
+
+<h3>Drinks</h3>
+
+<div class="item">Blue Lagoon ₹40 <input type="number" id="b1" value="0"></div>
+<div class="item">Mint Mojito ₹40 <input type="number" id="b2" value="0"></div>
+<div class="item">Rose Milk ₹35 <input type="number" id="b3" value="0"></div>
+<div class="item">Mango Shake ₹50 <input type="number" id="b4" value="0"></div>
+
+<h3>Snacks</h3>
+
+<div class="item">Pani Puri ₹30 <input type="number" id="s1" value="0"></div>
+<div class="item">Masala Puri ₹40 <input type="number" id="s2" value="0"></div>
+
+</div>
+
+<button onclick="makeBill()">Generate Bill</button>
+
+<div class="box bill" id="billBox">
+
+<h3>🧾 Bill</h3>
+
+<p id="sub"></p>
+<p id="gst"></p>
+<p id="serv"></p>
+<hr>
+<h3 id="total"></h3>
+
+<button onclick="window.print()">🖨️ Print Bill</button>
+
+</div>
+
+<script>
+
+function makeBill(){
+
+let total = 0;
+
+total += document.getElementById("b1").value * 40;
+total += document.getElementById("b2").value * 40;
+total += document.getElementById("b3").value * 35;
+total += document.getElementById("b4").value * 50;
+
+total += document.getElementById("s1").value * 30;
+total += document.getElementById("s2").value * 40;
+
+let gst = total * 0.05;
+let service = total * 0.05;
+
+let grand = total + gst + service;
+
+document.getElementById("sub").innerText =
+"Subtotal: ₹" + total.toFixed(2);
+
+document.getElementById("gst").innerText =
+"GST (5%): ₹" + gst.toFixed(2);
+
+document.getElementById("serv").innerText =
+"Service Charge (5%): ₹" + service.toFixed(2);
+
+document.getElementById("total").innerText =
+"Total: ₹" + grand.toFixed(2);
+
+document.getElementById("billBox").style.display = "block";
+
+}
+
+</script>
+
+</body>
+</html>
